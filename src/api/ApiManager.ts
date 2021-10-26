@@ -418,6 +418,26 @@ export default class ApiManager {
             .then(http.fetch(http.GET, '/user/system/nginxconfig', {}))
     }
 
+    getGridConfig() {
+        return new Promise((resolve, reject) => {
+            try {
+                resolve(StorageHelper.getGridConfigFromLocalStorage())
+            } catch (e) {
+                reject(e)
+            }
+        })
+    }
+
+    setGridConfig(newConfig: any) {
+        return new Promise((resolve, reject) => {
+            try {
+                resolve(StorageHelper.setGridConfigInLocalStorage(newConfig))
+            } catch (e) {
+                reject(e)
+            }
+        })
+    }
+
     setNginxConfig(customBase: string, customCaptain: string) {
         const http = this.http
 
@@ -570,6 +590,17 @@ export default class ApiManager {
 
         return Promise.resolve() //
             .then(http.fetch(http.GET, '/user/oneclick/repositories', {}))
+    }
+
+    getJoinInfo(isManager: boolean) {
+        const http = this.http
+        let url = '/user/system/join/token'
+        if (isManager) {
+            url += '?manager=1'
+        }
+
+        return Promise.resolve()
+            .then(http.fetch(http.GET, url, {}))
     }
 
     addNewCustomOneClickRepo(repositoryUrl: string) {

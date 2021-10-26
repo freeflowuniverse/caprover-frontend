@@ -6,6 +6,7 @@ import BackupCreator from './BackupCreator'
 import ChangePass from './ChangePass'
 import CheckUpdate from './CheckUpdate'
 import DiskCleanup from './DiskCleanup'
+import GridConfig from './GridConfig'
 import NginxConfig from './NginxConfig'
 
 class Settings extends Component<
@@ -49,6 +50,18 @@ class Settings extends Component<
                             title="NGINX Configurations"
                         >
                             <NginxConfig isMobile={this.props.isMobile} />
+                        </Card>
+                    </Col>
+                    <Col
+                        style={{ marginBottom: 20 }}
+                        lg={{ span: 20 }}
+                        xs={{ span: 23 }}
+                    >
+                        <Card
+                            style={{ height: '100%' }}
+                            title="Grid Configurations"
+                        >
+                            <GridConfig isMobile={this.props.isMobile} />
                         </Card>
                     </Col>
                     <Col

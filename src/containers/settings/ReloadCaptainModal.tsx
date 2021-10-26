@@ -21,7 +21,7 @@ export default class ReloadCaptainModal extends Component<
         self.setState({ timeToRefresh: 60 })
         setInterval(function () {
             if (self.state.timeToRefresh < 2) {
-                window.location.reload(true)
+                window.location.reload()
                 return
             }
             self.setState({ timeToRefresh: self.state.timeToRefresh - 1 })

@@ -7,6 +7,7 @@ import ApiComponent from '../global/ApiComponent'
 import CenteredSpinner from '../global/CenteredSpinner'
 import ErrorRetry from '../global/ErrorRetry'
 import AddNode, { INodeToAdd } from './AddNode'
+import DeployNode from './DeployNode'
 
 class CurrentNodes extends ApiComponent<
     {
@@ -180,14 +181,23 @@ class CurrentNodes extends ApiComponent<
 
         return (
             <div>
-                {this.props.defaultRegistryId ? (
-                    <AddNode
-                        leaderIp={leaderIp}
-                        isMobile={this.props.isMobile}
-                        onAddNodeClicked={(nodeToAdd) => {
-                            self.addNode(nodeToAdd)
-                        }}
-                    />
+                {this.props.defaultRegistryId || true ? (
+                    <React.Fragment>
+                        <AddNode
+                            leaderIp={leaderIp}
+                            isMobile={this.props.isMobile}
+                            onAddNodeClicked={(nodeToAdd) => {
+                                self.addNode(nodeToAdd)
+                            }}
+                        />
+                        <DeployNode
+                            // leaderIp={leaderIp}
+                            isMobile={this.props.isMobile}
+                            // onAddNodeClicked={(nodeToAdd) => {
+                            //     self.addNode(nodeToAdd)
+                            // }}
+                        />
+                    </React.Fragment>
                 ) : (
                     <div>
                         <Alert
