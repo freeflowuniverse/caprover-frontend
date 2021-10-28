@@ -1,6 +1,6 @@
-import { Alert, Button, Card, Collapse, Form, Input, InputNumber, Row } from "antd"
+import { Alert, Button, Card, Collapse, Form, Input, InputNumber, Modal, Row } from "antd"
 import TextArea from "antd/lib/input/TextArea"
-import { DiskModel, GridClient, MachineModel, MachinesModel, NetworkModel } from "grid3_client"
+import { DiskModel, generateString, GridClient, MachineModel, MachinesModel, NetworkModel } from "grid3_client"
 import { HTTPMessageBusClient } from "ts-rmb-http-client"
 import Toaster from '../../utils/Toaster'
 import ApiComponent from '../global/ApiComponent'
@@ -18,6 +18,13 @@ interface JoinInfo {
     ip?: string
 }
 
+
+const defaultNodeValues = {
+    cpu: 1,
+    memory: 2048,
+    disk_size: 20
+}
+
 export default class DeployNode extends ApiComponent<
     {
         isMobile: boolean
@@ -25,6 +32,7 @@ export default class DeployNode extends ApiComponent<
     },
     {
         isLoading: boolean
+        isLoadingTitle: string
         gridConfig: any,
         joinInfo: JoinInfo,
         // rmbClient: HTTPMessageBusClient
@@ -34,9 +42,9 @@ export default class DeployNode extends ApiComponent<
     constructor(props: any) {
         super(props)
 
-
         this.state = {
             isLoading: true,
+            isLoadingTitle: "",
             gridConfig: {},
             joinInfo: {},
         }
@@ -54,7 +62,6 @@ export default class DeployNode extends ApiComponent<
         Promise.all([configPromise, joinInfoPromise])
             .then((data: Array<any>) => {
                 const [gridConfig, joinInfo] = data
-                console.log(data)
                 this.setState({gridConfig: gridConfig, joinInfo: joinInfo})
 
             })
@@ -68,11 +75,11 @@ export default class DeployNode extends ApiComponent<
         const machines = new MachinesModel()
 
         // names can be generated then use list/get if needed
-        machines.name = "caprover" // should be unique? because of deployment hash or local storage
+        machines.name = `caprover_${generateString(20)}` // should be unique? because of deployment hash or local storage
         const network = new NetworkModel()
         // should generate a new name to prevent network updates which take more time
         // we can keep the same network name if we need newly added machines to be reachable from the same network
-        network.name = "default"
+        network.name = `caprover_network_${generateString(10)}`
         network.ip_range = "10.200.0.0/16"
         machines.network = network
 
@@ -82,13 +89,13 @@ export default class DeployNode extends ApiComponent<
 
         const disk0 = new DiskModel()
         disk0.name = "data2"
-        disk0.size = 20
+        disk0.size = params.disk_size
         disk0.mountpoint = "/var/lib/docker"
         machine.disks = [disk0]
 
-        machine.node_id = params.node_id // 2, 3, 7, 5 temp for now
+        machine.node_id = params.node_id
         machine.public_ip = true
-        machine.name = "caprover"
+        machine.name = `caprover_worker_${generateString(20)}`
         machine.planetary = false
         machine.flist = "https://hub.grid.tf/samehabouelsaad.3bot/abouelsaad-caprover-tf_10.0.1_v1.0.flist"
         machine.qsfs_disks = []
@@ -102,7 +109,33 @@ export default class DeployNode extends ApiComponent<
 
         machines.machines = [machine]
         machines.description = "caprover worker machine/node"
-        gridClient.machines.deploy(machines)
+
+        const self = this
+        self.setState({isLoading: true, isLoadingTitle: "Deploying..."})
+        try {
+            const result = await gridClient.machines.deploy(machines)
+            const ids = result.contracts.created.map((contract) => contract.contract_id)
+            Modal.info({
+                title: "Success",
+                content: (
+                    <div>
+                        Deployed a worker node with contract ID(s) of: <b>{ids.join(",")}</b>
+                    </div>
+                )
+            })
+        } catch (error: any) {
+            const errorMessage = error.toString()
+            Modal.error({
+                title: "Error",
+                content: (
+                    <div>
+                        An error occurred while trying to deploy a worker node: <br/>{errorMessage}
+                    </div>
+                )
+            })
+        } finally {
+            self.setState({isLoading: false, isLoadingTitle: ""})
+        }
     }
 
     componentDidMount() {
@@ -110,8 +143,6 @@ export default class DeployNode extends ApiComponent<
     }
 
     render() {
-        // TODO: show instruction to set grid config and hide the form if not set
-
         const gridConfig = this.state.gridConfig
         const joinInfo = this.state.joinInfo
 
@@ -122,12 +153,11 @@ export default class DeployNode extends ApiComponent<
                 params = Object.assign(params, gridConfig)
             }
 
-            console.log("deploying with", params)
             this.deployNode(params)
         }
 
         if (this.state.isLoading) {
-            return <CenteredSpinner />
+            return <CenteredSpinner title={this.state.isLoadingTitle}/>
         }
 
         if (!gridConfig.twin_id || !gridConfig.mnemonics || !gridConfig.url || !gridConfig.proxy_url) {
@@ -146,6 +176,10 @@ export default class DeployNode extends ApiComponent<
                 </div>
             )
         }
+
+
+        const defaults = Object.assign(defaultNodeValues, gridConfig)
+
         return (
             <div>
             <Card
@@ -157,7 +191,7 @@ export default class DeployNode extends ApiComponent<
                 name="deploynode"
                 labelCol={{ span: 2 }}
                 wrapperCol={{ span: 26 }}
-                initialValues={ gridConfig }
+                initialValues={ defaults }
                 onFinish={(values) => deploy(values)}
                 autoComplete="off">
                     <Form.Item
@@ -182,17 +216,19 @@ export default class DeployNode extends ApiComponent<
                         label="Memory size"
                         name="memory"
                         rules={[{ required: true, message: 'Please set memory size' }, { type: "number" }]}>
-                        <InputNumber
+                        <Input
                             min={0}
+                            addonAfter="MB"
                             style = {{ width: '25%' }}/>
                     </Form.Item>
                     <div style={{ height: 20 }} />
                     <Form.Item
                         label="Disk size"
-                        name="node_id"
+                        name="disk_size"
                         rules={[{ required: true, message: 'Please choose a node' }, { type: "number" }]}>
-                        <InputNumber
+                        <Input
                             min={0}
+                            addonAfter="GB"
                             style = {{ width: '25%' }}/>
                     </Form.Item>
                     <div style={{ height: 20 }} />
