@@ -14,10 +14,9 @@ const SIDER_COLLAPSED_STATE = 'CAPROVER_SIDER_COLLAPSED_STATE'
 const DARK_MODE = 'CAPROVER_DARK_MODE'
 const GRID_CONFIG = 'CAPROVER_GRID_CONFIG'
 const DEFAULT_GRID_CONFIG = {
-    twin_id: 0,
     mnemonics: "",
-    url: "wss://tfchain.dev.threefold.io/ws",
-    proxy_url: "https://rmbproxy1.devnet.grid.tf"
+    network: "dev",
+    public_key: ""
 }
 
 class StorageHelper {
@@ -77,7 +76,6 @@ class StorageHelper {
     }
 
     setGridConfigInLocalStorage(newConfig: any) {
-        console.log(newConfig)
         localStorage.setItem(GRID_CONFIG, JSON.stringify(newConfig))
     }
 }

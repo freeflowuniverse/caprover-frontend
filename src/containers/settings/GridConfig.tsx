@@ -1,4 +1,6 @@
-import { Button, Form, Input, InputNumber, message, Row } from 'antd'
+import { Button, Form, Input, message, Row, Select } from 'antd'
+import TextArea from 'antd/lib/input/TextArea'
+import { NetworkEnv } from 'grid3_client'
 import React from 'react'
 import Toaster from '../../utils/Toaster'
 import ApiComponent from '../global/ApiComponent'
@@ -66,6 +68,8 @@ export default class GridConfig extends ApiComponent<
             return <ErrorRetry />
         }
 
+        const networkOptions = Object.keys(NetworkEnv).map((key: any) => (<Select.Option value={NetworkEnv[key as keyof typeof NetworkEnv]}>{key}</Select.Option> ))
+
         return (
             <Form
                 name="gridconfig"
@@ -75,15 +79,6 @@ export default class GridConfig extends ApiComponent<
                 onFinish={(values) => self.updateConfig(values)}
                 autoComplete="off">
                     <Form.Item
-                        label="Twin ID"
-                        name="twin_id"
-                        rules={[{ required: true, message: 'Please enter your twin ID!' }, { type: "number" }]}>
-                        <InputNumber
-                            min={0}
-                            style = {{ width: '25%' }}/>
-                    </Form.Item>
-                    <div style={{ height: 20 }} />
-                    <Form.Item
                         label="Mnemonics"
                         name="mnemonics"
                         rules={[{ required: true, message: 'Please enter your mnemonics!' }]}>
@@ -92,17 +87,18 @@ export default class GridConfig extends ApiComponent<
                     <hr />
                     <div style={{ height: 20 }} />
                     <Form.Item
-                        label="Explorer URL"
-                        name="url"
-                        rules={[{ required: true, message: 'Please choose a default explorer URL' }]}>
-                        <Input type="url" minLength={10}/>
+                        label="Network"
+                        name="network"
+                        rules={[{ required: true, message: 'Please choose a network' }]}>
+                        <Select>
+                            {networkOptions}
+                        </Select>
                     </Form.Item>
                     <div style={{ height: 20 }} />
                     <Form.Item
-                        label="Proxy URL"
-                        name="proxy_url"
-                        rules={[{ required: true, message: 'Please choose a default proxy URL' }]}>
-                    <Input type="url" minLength={10}/>
+                        label="Public key"
+                        name="public_key">
+                        <TextArea></TextArea>
                     </Form.Item>
                     <div style={{ height: 40 }} />
                     <Form.Item>

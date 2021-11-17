@@ -1,6 +1,7 @@
-import { Alert, Button, Card, Collapse, Form, Input, InputNumber, Modal, Row } from "antd"
+import { Alert, Button, Card, Collapse, Form, InputNumber, Modal, Row } from "antd"
 import TextArea from "antd/lib/input/TextArea"
-import { DiskModel, generateString, GridClient, MachineModel, MachinesModel, NetworkModel } from "grid3_client"
+import { DiskModel, events, generateString, GridClient, MachineModel, MachinesModel, NetworkModel } from "grid3_client"
+import { BackendStorageType } from "grid3_client/dist/es6/storage/backend"
 import { HTTPMessageBusClient } from "ts-rmb-http-client"
 import Toaster from '../../utils/Toaster'
 import ApiComponent from '../global/ApiComponent'
@@ -70,9 +71,6 @@ export default class DeployNode extends ApiComponent<
             .then(() => self.setState({isLoading: false}))
     }
     async deployNode(params: any) {
-        const rmbClient = new HTTPMessageBusClient(params.twin_id, params.proxy_url)
-
-        const gridClient = new GridClient(params.twin_id, params.url, params.mnemonics, rmbClient)
         const machines = new MachinesModel()
 
         // names can be generated then use list/get if needed
@@ -105,15 +103,34 @@ export default class DeployNode extends ApiComponent<
         machine.env = {
             SWM_NODE_MODE: "worker",
             SWMTKN: params.token,
-            LEADER_PUBLIC_IP: params.ip
+            LEADER_PUBLIC_IP: params.ip,
+            PUBLIC_KEY: params.public_key.trim()
         }
 
         machines.machines = [machine]
         machines.description = "caprover worker machine/node"
 
         const self = this
+        const logsListener = (msg: any) => {
+            let value
+
+            if (msg instanceof Object) {
+              value = ""
+            }
+
+            self.setState({isLoadingTitle: msg.toString()})
+        }
+
         self.setState({isLoading: true, isLoadingTitle: "Deploying..."})
+        events.addListener("logs", logsListener)
+
         try {
+            // twin id and proxy url are set by the grid client
+            const rmbClient = new HTTPMessageBusClient(0, "")
+            // storeSecret is not used anyway, we use local storage here
+            const gridClient = new GridClient(params.network, params.mnemonics.trim(), "test", rmbClient, "", BackendStorageType.localstorage)
+            await gridClient.connect()
+
             const result = await gridClient.machines.deploy(machines)
             const ids = result.contracts.created.map((contract) => contract.contract_id)
             Modal.info({
@@ -125,6 +142,7 @@ export default class DeployNode extends ApiComponent<
                 )
             })
         } catch (error: any) {
+            // console.error(error)
             const errorMessage = error.toString()
             Modal.error({
                 title: "Error",
@@ -135,10 +153,10 @@ export default class DeployNode extends ApiComponent<
                 )
             })
         } finally {
+            events.removeListener("logs", logsListener)
             self.setState({isLoading: false, isLoadingTitle: ""})
         }
     }
-
     componentDidMount() {
         this.getConfig()
     }
@@ -147,21 +165,16 @@ export default class DeployNode extends ApiComponent<
         const gridConfig = this.state.gridConfig
         const joinInfo = this.state.joinInfo
 
-        const deploy = (values: Object) => {
-            let params  = Object.assign(values, joinInfo)
-
-            if (!values.hasOwnProperty("twin_id")) {
-                params = Object.assign(params, gridConfig)
-            }
-
-            this.deployNode(params)
+        const deploy = async (values: Object) => {
+            const params = Object.assign(joinInfo, gridConfig, values)
+            await this.deployNode(params)
         }
 
         if (this.state.isLoading) {
             return <CenteredSpinner title={this.state.isLoadingTitle}/>
         }
 
-        if (!gridConfig.twin_id || !gridConfig.mnemonics || !gridConfig.url || !gridConfig.proxy_url) {
+        if (!gridConfig.mnemonics || !gridConfig.network) {
             return (
                 <div>
                     <Card
@@ -190,7 +203,7 @@ export default class DeployNode extends ApiComponent<
             >
            <Form
                 name="deploynode"
-                labelCol={{ span: 2 }}
+                labelCol={{ span: 3 }}
                 wrapperCol={{ span: 26 }}
                 initialValues={ defaults }
                 onFinish={(values) => deploy(values)}
@@ -214,23 +227,17 @@ export default class DeployNode extends ApiComponent<
                     </Form.Item>
                     <div style={{ height: 20 }} />
                     <Form.Item
-                        label="Memory size"
+                        label="Memory size (MB)"
                         name="memory"
-                        rules={[{ required: true, message: 'Please set memory size' }, { type: "number" }]}>
-                        <Input
-                            min={0}
-                            addonAfter="MB"
-                            style = {{ width: '25%' }}/>
+                        rules={[{ required: true, message: 'Please set memory size' }]}>
+                            <InputNumber min={0} style = {{ width: '25%' }}/>
                     </Form.Item>
                     <div style={{ height: 20 }} />
                     <Form.Item
-                        label="Disk size"
+                        label="Disk size (GB)"
                         name="disk_size"
-                        rules={[{ required: true, message: 'Please choose a node' }, { type: "number" }]}>
-                        <Input
-                            min={0}
-                            addonAfter="GB"
-                            style = {{ width: '25%' }}/>
+                        rules={[{ required: true, message: 'Please choose a node' }]}>
+                            <InputNumber min={0} style = {{ width: '25%' }}/>
                     </Form.Item>
                     <div style={{ height: 20 }} />
                     <Form.Item
@@ -239,41 +246,6 @@ export default class DeployNode extends ApiComponent<
                         rules={[{ required: true, message: 'Please enter your public key to be able to access this node' }]}>
                         <TextArea></TextArea>
                     </Form.Item>
-                    <Collapse>
-                        <Panel header="Grid configurations" key="1">
-                            <Form.Item
-                                label="Twin ID"
-                                name="twin_id"
-                                rules={[{ required: true, message: 'Please enter your twin ID!' }, { type: "number" }]}>
-                                <InputNumber
-                                    min={0}
-                                    style = {{ width: '25%' }}/>
-                            </Form.Item>
-                            <div style={{ height: 20 }} />
-                            <Form.Item
-                                label="Mnemonics"
-                                name="mnemonics"
-                                rules={[{ required: true, message: 'Please enter your mnemonics!' }]}>
-                                <Input.Password minLength={25}/>
-                            </Form.Item>
-                            <hr />
-                            <div style={{ height: 20 }} />
-                            <Form.Item
-                                label="Explorer URL"
-                                name="url"
-                                rules={[{ required: true, message: 'Please choose a default explorer URL' }]}>
-                                <Input type="url" minLength={10}/>
-                            </Form.Item>
-                            <div style={{ height: 20 }} />
-                            <Form.Item
-                                label="Proxy URL"
-                                name="proxy_url"
-                                rules={[{ required: true, message: 'Please choose a default proxy URL' }]}>
-                            <Input type="url" minLength={10}/>
-                            </Form.Item>
-                            <div style={{ height: 40 }} />
-                        </Panel>
-                    </Collapse>
                     <div style={{ height: 20 }} />
                     <Form.Item>
                         <Row justify="end">
