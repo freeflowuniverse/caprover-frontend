@@ -137,7 +137,7 @@ export default class DeployNode extends ApiComponent<
                 title: "Success",
                 content: (
                     <div>
-                        Deployed a worker node with contract ID(s) of: <b>{ids.join(",")}</b>
+                        Deployed a worker node with contract ID(s) of: <b>{ids.join(", ")}</b>
                     </div>
                 )
             })
@@ -170,44 +170,28 @@ export default class DeployNode extends ApiComponent<
             await this.deployNode(params)
         }
 
+        let content
+
         if (this.state.isLoading) {
-            return <CenteredSpinner title={this.state.isLoadingTitle}/>
-        }
-
-        if (!gridConfig.mnemonics || !gridConfig.network) {
-            return (
-                <div>
-                    <Card
-                        style={{ marginTop: 16 }}
-                        type="inner"
-                        title="Deploy a new node on Threefold grid">
-                        <Alert
-                            type="warning"
-                            showIcon={true}
-                            message="Please complete grid configuration first (Settings -> Grid configuration)"
-                        />
-                    </Card>
-                </div>
+            content = <CenteredSpinner title={this.state.isLoadingTitle}/>
+        } else if (!gridConfig.mnemonics || !gridConfig.network) {
+            content = (
+                <Alert
+                    type="warning"
+                    showIcon={true}
+                    message="Please complete grid configuration first (Settings -> Grid configuration)"
+                />
             )
-        }
-
-
-        const defaults = Object.assign(defaultNodeValues, gridConfig)
-
-        return (
-            <div>
-            <Card
-                style={{ marginTop: 16 }}
-                type="inner"
-                title="Deploy a new node on Threefold grid"
-            >
-           <Form
-                name="deploynode"
-                labelCol={{ span: 3 }}
-                wrapperCol={{ span: 26 }}
-                initialValues={ defaults }
-                onFinish={(values) => deploy(values)}
-                autoComplete="off">
+        } else {
+            const defaults = Object.assign(defaultNodeValues, gridConfig)
+            content = (
+                <Form
+                    name="deploynode"
+                    labelCol={{ span: 3 }}
+                    wrapperCol={{ span: 26 }}
+                    initialValues={ defaults }
+                    onFinish={(values) => deploy(values)}
+                    autoComplete="off">
                     <Form.Item
                         label="Node ID"
                         name="node_id"
@@ -255,9 +239,19 @@ export default class DeployNode extends ApiComponent<
                                 block={this.props.isMobile}>Deploy</Button>
                         </Row>
                     </Form.Item>
-            </Form >
-            </Card>
-            </div >
+                </Form >
+            )
+        }
+
+        return (
+            <div>
+                <Card
+                    style={{ marginTop: 16 }}
+                    type="inner"
+                    title="Deploy a new node on Threefold grid">
+                    { content }
+                </Card>
+            </div>
         )
     }
 }
