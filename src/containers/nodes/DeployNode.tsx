@@ -115,10 +115,12 @@ export default class DeployNode extends ApiComponent<
             let value
 
             if (msg instanceof Object) {
-              value = ""
+                value = ""
+            } else {
+                value = msg.toString()
             }
 
-            self.setState({isLoadingTitle: msg.toString()})
+            self.setState({isLoadingTitle: value})
         }
 
         self.setState({isLoading: true, isLoadingTitle: "Deploying..."})
