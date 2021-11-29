@@ -1,14 +1,10 @@
-import { Alert, Button, Card, Collapse, Form, InputNumber, Modal, Row } from "antd"
+import { Alert, Button, Card, Form, InputNumber, Modal, Row, Select } from "antd"
 import TextArea from "antd/lib/input/TextArea"
-import { DiskModel, events, generateString, GridClient, MachineModel, MachinesModel, NetworkModel } from "grid3_client"
-import { BackendStorageType } from "grid3_client/dist/es6/storage/backend"
+import { BackendStorageType, DiskModel, events, generateString, GridClient, MachineModel, MachinesModel, NetworkModel, Nodes } from "grid3_client"
 import { HTTPMessageBusClient } from "ts-rmb-http-client"
 import Toaster from '../../utils/Toaster'
 import ApiComponent from '../global/ApiComponent'
 import CenteredSpinner from '../global/CenteredSpinner'
-
-const { Panel } = Collapse
-
 
 export enum Provider {
     THREEFOLD
@@ -26,6 +22,20 @@ const defaultNodeValues = {
     disk_size: 20
 }
 
+function getGridClient(params: any) {
+    // twin id and proxy url are set by the grid client
+    const rmbClient = new HTTPMessageBusClient(0, "")
+    // storeSecret is not used anyway, we use local storage here
+    const gridClient = new GridClient(params.network, params.mnemonics.trim(), params.store_secret, rmbClient, "", BackendStorageType.tfkvstore)
+
+
+    window.onbeforeunload = () => {
+        gridClient.disconnect()
+    }
+
+    return gridClient
+}
+
 export default class DeployNode extends ApiComponent<
     {
         isMobile: boolean
@@ -36,6 +46,9 @@ export default class DeployNode extends ApiComponent<
         isLoadingTitle: string
         gridConfig: any,
         joinInfo: JoinInfo,
+        showModal: boolean,
+        nodes: Array<number>;
+        deployParams: any,
         // rmbClient: HTTPMessageBusClient
 
     }
@@ -48,6 +61,9 @@ export default class DeployNode extends ApiComponent<
             isLoadingTitle: "",
             gridConfig: {},
             joinInfo: {},
+            showModal: false,
+            nodes: [],
+            deployParams: {},
         }
 
     }
@@ -127,10 +143,7 @@ export default class DeployNode extends ApiComponent<
         events.addListener("logs", logsListener)
 
         try {
-            // twin id and proxy url are set by the grid client
-            const rmbClient = new HTTPMessageBusClient(0, "")
-            // storeSecret is not used anyway, we use local storage here
-            const gridClient = new GridClient(params.network, params.mnemonics.trim(), "test", rmbClient, "", BackendStorageType.localstorage)
+            const gridClient = getGridClient(params)
             await gridClient.connect()
 
             const result = await gridClient.machines.deploy(machines)
@@ -167,10 +180,57 @@ export default class DeployNode extends ApiComponent<
         const gridConfig = this.state.gridConfig
         const joinInfo = this.state.joinInfo
 
-        const deploy = async (values: Object) => {
-            const params = Object.assign(joinInfo, gridConfig, values)
+        const findNodesClicked = async (values: any) => {
+            this.setState({isLoading: true, isLoadingTitle: "Finding nodes with enough resources on the grid..."})
+
+            const { rmbProxy, graphql} = getGridClient(gridConfig).getDefaultUrls(gridConfig.network as any)
+
+            const gridNodes = new Nodes(graphql, rmbProxy)
+            try {
+                // filter options sizes are in GB
+                const nodes = await gridNodes.filterNodes({
+                    cru: values.cpu,
+                    mru: values.memory / 1024,
+                    sru: values.disk_size,
+                    publicIPs: true
+                })
+
+                if (nodes.length === 0) {
+                    throw Error("Cannot find nodes with enough resources on the grid")
+                } else {
+                    this.setState({
+                        nodes: nodes.map((node: any) => node.nodeId),
+                        deployParams: values,
+                    })
+                    showModal()
+                }
+
+            } catch (error: any) {
+                Modal.error({
+                    title: "Error",
+                    content: (
+                        <div>{error.toString()}</div>
+                    )
+                })
+            } finally {
+                this.setState({isLoading: false, isLoadingTitle: ""})
+            }
+        }
+
+        const deployClicked = async (values: any) => {
+            hideModal()
+
+            const deployParams = this.state.deployParams
+            deployParams.node_id = values.node_id
+
+            const params = Object.assign(joinInfo, gridConfig, deployParams)
             await this.deployNode(params)
         }
+
+        const showModal = () => this.setState({showModal: true})
+        const hideModal = () => this.setState({showModal: false})
+
+        const nodes = this.state.nodes.map((nodeId: any) => (<Select.Option value={nodeId} key={nodeId}>({nodeId})</Select.Option> ))
 
         let content
 
@@ -186,23 +246,16 @@ export default class DeployNode extends ApiComponent<
             )
         } else {
             const defaults = Object.assign(defaultNodeValues, gridConfig)
+
             content = (
                 <Form
-                    name="deploynode"
+                    name="deployconfigform"
                     labelCol={{ span: 3 }}
                     wrapperCol={{ span: 26 }}
                     initialValues={ defaults }
-                    onFinish={(values) => deploy(values)}
+                    // onFinish={(values) => deploy(values)}
+                    onFinish={findNodesClicked}
                     autoComplete="off">
-                    <Form.Item
-                        label="Node ID"
-                        name="node_id"
-                        rules={[{ required: true, message: 'Please select a node' }, { type: "number" }]}>
-                        <InputNumber
-                            min={0}
-                            style = {{ width: '25%' }}/>
-                    </Form.Item>
-                    <div style={{ height: 20 }} />
                     <Form.Item
                         label="CPU cores"
                         name="cpu"
@@ -238,22 +291,58 @@ export default class DeployNode extends ApiComponent<
                             <Button
                                 type="primary"
                                 htmlType="submit"
-                                block={this.props.isMobile}>Deploy</Button>
+                                block={this.props.isMobile}>Search resources...</Button>
                         </Row>
                     </Form.Item>
                 </Form >
             )
         }
 
+
+        const modal = (
+            < Modal
+            title ={`Please select from the following (${this.state.nodes.length}) node(s)`}
+            visible = {this.state.showModal}
+            destroyOnClose={true}
+            footer={[
+                <Button onClick={hideModal} key="cancel">
+                    Cancel
+                </Button>,
+
+                <Button type="primary" form="deployform" key="submit" htmlType="submit">
+                    Deploy
+                </Button>
+            ]}>
+                <Form
+                    id="deployform"
+                    name="deployform"
+                    labelCol={{ span: 4 }}
+                    wrapperCol={{ span: 26 }}
+                    autoComplete="off"
+                    preserve={false}
+                    onFinish={deployClicked}>
+                    <Form.Item
+                        label="Node ID"
+                        name="node_id"
+                        rules={[{ required: true, message: 'Please select a node' }]}>
+                        <Select style = {{ width: '25%' }}>
+                            {nodes}
+                        </Select>
+                    </Form.Item>
+                </Form>
+            </Modal >
+        )
+
         return (
-            <div>
+            <div >
                 <Card
                     style={{ marginTop: 16 }}
                     type="inner"
                     title="Deploy a new node on Threefold grid">
                     { content }
+                    { modal }
                 </Card>
-            </div>
+            </div >
         )
     }
 }
