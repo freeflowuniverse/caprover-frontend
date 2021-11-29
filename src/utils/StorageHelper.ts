@@ -15,8 +15,9 @@ const DARK_MODE = 'CAPROVER_DARK_MODE'
 const GRID_CONFIG = 'CAPROVER_GRID_CONFIG'
 const DEFAULT_GRID_CONFIG = {
     mnemonics: "",
+    store_secret: "",
     network: "dev",
-    public_key: ""
+    public_key: "",
 }
 
 class StorageHelper {

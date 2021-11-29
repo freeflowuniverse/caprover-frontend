@@ -84,6 +84,13 @@ export default class GridConfig extends ApiComponent<
                         rules={[{ required: true, message: 'Please enter your mnemonics!' }]}>
                         <Input.Password minLength={25}/>
                     </Form.Item>
+                    <div style={{ height: 20 }} />
+                    <Form.Item
+                        label="Store secret"
+                        name="store_secret"
+                        rules={[{ required: true, message: 'Please enter your store secret which will be used to access deployed nodes information' }]}>
+                        <Input.Password minLength={8}/>
+                    </Form.Item>
                     <hr />
                     <div style={{ height: 20 }} />
                     <Form.Item
