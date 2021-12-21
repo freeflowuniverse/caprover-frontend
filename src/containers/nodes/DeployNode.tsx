@@ -90,11 +90,11 @@ export default class DeployNode extends ApiComponent<
         const machines = new MachinesModel()
 
         // names can be generated then use list/get if needed
-        machines.name = `caprover_${generateString(20)}` // should be unique? because of deployment hash or local storage
+        machines.name = `cr${generateString(10)}` // should be unique? because of deployment hash or local storage
         const network = new NetworkModel()
         // should generate a new name to prevent network updates which take more time
         // we can keep the same network name if we need newly added machines to be reachable from the same network
-        network.name = `caprover_network_${generateString(10)}`
+        network.name = `crnet${generateString(10)}`
         network.ip_range = "10.200.0.0/16"
         machines.network = network
 
@@ -110,9 +110,9 @@ export default class DeployNode extends ApiComponent<
 
         machine.node_id = params.node_id
         machine.public_ip = true
-        machine.name = `caprover_worker_${generateString(20)}`
+        machine.name = `crwrk${generateString(10)}`
         machine.planetary = false
-        machine.flist = "https://hub.grid.tf/samehabouelsaad.3bot/abouelsaad-caprover-tf_10.0.1_v1.0.flist"
+        machine.flist = "https://hub.grid.tf/tf-official-apps/tf-caprover-main.flist"
         machine.qsfs_disks = []
         machine.rootfs_size = 10
         machine.entrypoint = "/sbin/zinit init"
