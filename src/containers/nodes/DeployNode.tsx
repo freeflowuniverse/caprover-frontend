@@ -2,6 +2,7 @@ import { Alert, Button, Card, Form, InputNumber, Modal, Row, Select } from "antd
 import TextArea from "antd/lib/input/TextArea"
 import { BackendStorageType, DiskModel, events, generateString, GridClient, MachineModel, MachinesModel, NetworkModel, Nodes } from "grid3_client"
 import { HTTPMessageBusClient } from "ts-rmb-http-client"
+import { IRegistryApi } from "../../models/IRegistryInfo"
 import Toaster from '../../utils/Toaster'
 import ApiComponent from '../global/ApiComponent'
 import CenteredSpinner from '../global/CenteredSpinner'
@@ -21,6 +22,8 @@ const defaultNodeValues = {
     memory: 2048,
     disk_size: 20
 }
+
+const ROOT_FS_SIZE = 10 // GB
 
 function getGridClient(params: any) {
     // twin id and proxy url are set by the grid client
@@ -49,6 +52,7 @@ export default class DeployNode extends ApiComponent<
         showModal: boolean,
         nodes: Array<number>;
         deployParams: any,
+        registryInfo: IRegistryApi
         // rmbClient: HTTPMessageBusClient
 
     }
@@ -64,6 +68,7 @@ export default class DeployNode extends ApiComponent<
             showModal: false,
             nodes: [],
             deployParams: {},
+            registryInfo: {} as IRegistryApi,
         }
 
     }
@@ -75,12 +80,13 @@ export default class DeployNode extends ApiComponent<
         const configPromise = self.apiManager.getGridConfig()
         // need to join as worker
         const joinInfoPromise = self.apiManager.getJoinInfo(false)
+        // need to make sure there's a default registery
+        const registryPromise = self.apiManager.getDockerRegistries()
 
-
-        Promise.all([configPromise, joinInfoPromise])
+        Promise.all([configPromise, joinInfoPromise, registryPromise])
             .then((data: Array<any>) => {
-                const [gridConfig, joinInfo] = data
-                this.setState({gridConfig: gridConfig, joinInfo: joinInfo})
+                const [gridConfig, joinInfo, registryInfo] = data
+                this.setState({gridConfig: gridConfig, joinInfo: joinInfo, registryInfo: registryInfo})
 
             })
             .catch(Toaster.createCatcher())
@@ -114,7 +120,7 @@ export default class DeployNode extends ApiComponent<
         machine.planetary = false
         machine.flist = "https://hub.grid.tf/tf-official-apps/tf-caprover-main.flist"
         machine.qsfs_disks = []
-        machine.rootfs_size = 10
+        machine.rootfs_size = ROOT_FS_SIZE
         machine.entrypoint = "/sbin/zinit init"
         machine.env = {
             SWM_NODE_MODE: "worker",
@@ -191,7 +197,7 @@ export default class DeployNode extends ApiComponent<
                 const nodes = await gridNodes.filterNodes({
                     cru: values.cpu,
                     mru: values.memory / 1024,
-                    sru: values.disk_size,
+                    sru: values.disk_size + ROOT_FS_SIZE,
                     publicIPs: true
                 })
 
@@ -242,6 +248,13 @@ export default class DeployNode extends ApiComponent<
                     type="warning"
                     showIcon={true}
                     message="Please complete grid configuration first (Settings -> Grid configuration)"
+                />
+            )
+        } else if (this.state.registryInfo.registries.length == 0) {
+            content = (
+                <Alert
+                    type="warning"
+                    message="No registries have been added yet. Go ahead and add your first registry from Cluster -> Docker Registry Configuration"
                 />
             )
         } else {
