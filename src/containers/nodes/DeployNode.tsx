@@ -27,7 +27,7 @@ const ROOT_FS_SIZE = 10 // GB
 
 function getGridClient(params: any) {
     // twin id and proxy url are set by the grid client
-    const rmbClient = new HTTPMessageBusClient(0, "")
+    const rmbClient = new HTTPMessageBusClient(0, "", "", "")
     // storeSecret is not used anyway, we use local storage here
     const gridClient = new GridClient(params.network, params.mnemonics.trim(), params.store_secret, rmbClient, "", BackendStorageType.tfkvstore)
 
