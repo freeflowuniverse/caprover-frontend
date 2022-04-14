@@ -25,16 +25,21 @@ const defaultNodeValues = {
 
 const ROOT_FS_SIZE = 10 // GB
 
-function getGridClient(params: any) {
+export function getGridClient(params: any) {
     // twin id and proxy url are set by the grid client
     const rmbClient = new HTTPMessageBusClient(0, "", "", "")
     // storeSecret is not used anyway, we use local storage here
     const gridClient = new GridClient(params.network, params.mnemonics.trim(), params.store_secret, rmbClient, "", BackendStorageType.tfkvstore)
 
 
-    window.onbeforeunload = () => {
+    window.addEventListener('beforeunload', function (e) {
+        // Cancel the event
+        e.preventDefault() // If you prevent default behavior in Mozilla Firefox prompt will always be shown
+        // Chrome requires returnValue to be set
+        e.returnValue = ''
         gridClient.disconnect()
-    }
+      })
+
 
     return gridClient
 }
@@ -148,8 +153,8 @@ export default class DeployNode extends ApiComponent<
         self.setState({isLoading: true, isLoadingTitle: "Deploying..."})
         events.addListener("logs", logsListener)
 
+        const gridClient = getGridClient(params)
         try {
-            const gridClient = getGridClient(params)
             await gridClient.connect()
 
             const result = await gridClient.machines.deploy(machines)
@@ -176,6 +181,7 @@ export default class DeployNode extends ApiComponent<
         } finally {
             events.removeListener("logs", logsListener)
             self.setState({isLoading: false, isLoadingTitle: ""})
+            gridClient.disconnect()
         }
     }
     componentDidMount() {

@@ -6,7 +6,7 @@ import Toaster from '../../utils/Toaster'
 import ApiComponent from '../global/ApiComponent'
 import CenteredSpinner from '../global/CenteredSpinner'
 import ErrorRetry from '../global/ErrorRetry'
-
+import { getGridClient } from '../nodes/DeployNode'
 export default class GridConfig extends ApiComponent<
     {
         isMobile: boolean
@@ -37,6 +37,21 @@ export default class GridConfig extends ApiComponent<
             .then(function () {
                 self.setState({ isLoading: false })
             })
+    }
+
+    async validateConfig(config: any, callback: Function) {
+        this.setState({ isLoading: true })
+
+        const client = getGridClient(config)
+        try {
+            await client.connect()
+            callback(config)
+        } catch (error: any) {
+            message.error(error.toString())
+        } finally {
+            this.setState({isLoading: false})
+            client.disconnect()
+        }
     }
 
     updateConfig(newConfig: any) {
@@ -76,7 +91,7 @@ export default class GridConfig extends ApiComponent<
                 labelCol={{ span: 2 }}
                 wrapperCol={{ span: 26 }}
                 initialValues={ gridConfig }
-                onFinish={(values) => self.updateConfig(values)}
+                onFinish={(values) => self.validateConfig(values, self.updateConfig.bind(self))}
                 autoComplete="off">
                     <Form.Item
                         label="Mnemonics"
@@ -103,9 +118,9 @@ export default class GridConfig extends ApiComponent<
                     </Form.Item>
                     <div style={{ height: 20 }} />
                     <Form.Item
-                        label="Public key"
+                        label="Public SSH key"
                         name="public_key">
-                        <TextArea></TextArea>
+                        <TextArea placeholder="Your default public SSH key to access different deployments"></TextArea>
                     </Form.Item>
                     <div style={{ height: 40 }} />
                     <Form.Item>
