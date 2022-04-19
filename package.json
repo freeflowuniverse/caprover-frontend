@@ -34,7 +34,7 @@
         "redux": "^4.0.5",
         "redux-thunk": "^2.3.0",
         "remark-gfm": "^1.0.0",
-        "ts-rmb-http-client": "^1.0.3",
+        "ts-rmb-http-client": "^1.0.5",
         "grid3_client": "^1.2.3",
         "tslint": "^6.1.3",
         "typescript": "^4.1.5",
