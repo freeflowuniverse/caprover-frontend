@@ -1,27 +1,20 @@
 {
-  "compilerOptions": {
-    "target": "es5",
-    "lib": [
-      "es5",
-      "es6",
-      "dom",
-      "ESNext"
-    ],
-    "allowJs": true,
-    "skipLibCheck": false,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "noFallthroughCasesInSwitch": true
-  },
-  "include": [
-    "src"
-  ]
+    "compilerOptions": {
+        "target": "es6",
+        "lib": ["es5", "es6", "dom", "ESNext"],
+        "allowJs": true,
+        "skipLibCheck": false,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "strict": true,
+        "forceConsistentCasingInFileNames": true,
+        "module": "esnext",
+        "moduleResolution": "node",
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "noEmit": true,
+        "jsx": "react-jsx",
+        "noFallthroughCasesInSwitch": true
+    },
+    "include": ["src"]
 }
