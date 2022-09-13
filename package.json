@@ -54,10 +54,9 @@
         "tslint-fix": "tslint --fix -c tslint.json -p tsconfig.json",
         "start": "SKIP_PREFLIGHT_CHECK=true npx gulp less && craco start",
         "less-watch": "npx gulp watch",
-        "build": "npx gulp less && craco build",
         "test": "craco test",
         "eject": "react-scripts eject",
-        "build:webpack": "webpack --config webpack.config.js"
+        "build": "webpack --config webpack.config.js"
     },
     "eslintConfig": {
         "extends": [
