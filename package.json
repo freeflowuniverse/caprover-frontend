@@ -56,7 +56,7 @@
         "less-watch": "npx gulp watch",
         "test": "craco test",
         "eject": "react-scripts eject",
-        "build": "webpack --config webpack.config.js"
+        "build": "SKIP_PREFLIGHT_CHECK=true npx gulp less && webpack --config webpack.config.js"
     },
     "eslintConfig": {
         "extends": [
